@@ -1,0 +1,21 @@
+﻿$ gh run list --limit 1
+completed	success	Trigger CI/CD workflow	CI workflow	main	push	41234072421	26s	2026-10-31T19:24:29Z
+
+$ gh run view 41234072421 --verbose
+✓ main CI workflow · 41234072421
+Triggered via push about 2 minutes ago
+
+JOBS
+✓ build in 23s (ID 124634048245)
+  ✓ Set up job
+  ✓ Initialize containers
+  ✓ Checkout
+  ✓ Install dependencies
+  ✓ Lint with flake8
+  ✓ Run unit tests with nose
+  ✓ Post Checkout
+  ✓ Stop containers
+  ✓ Complete job
+
+For more information about the job, try: gh run view --job=124634048245
+View this run on GitHub: https://github.com/Ragi509/vselh-ci-cd-final-project-template/actions/runs/41234072421

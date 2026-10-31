@@ -1,11 +1,13 @@
 """
-Controller for routes
-"""
-from flask import jsonify, url_for, abort
-from service import app
-from service.common import status
+Account Service
 
-COUNTER = {}
+This microservice handles the lifecycle of Accounts
+"""
+# pylint: disable=unused-import
+from flask import jsonify, request, make_response, abort, url_for   # noqa; F401
+from service.models import Account
+from service.common import status  # HTTP Status Codes
+from . import app  # Import Flask application
 
 
 ############################################################
@@ -17,106 +19,119 @@ def health():
     return jsonify(dict(status="OK")), status.HTTP_200_OK
 
 
-############################################################
-# Index page
-############################################################
+######################################################################
+# GET INDEX
+######################################################################
 @app.route("/")
 def index():
-    """Returns information abut the service"""
-    app.logger.info("Request for Base URL")
-    return jsonify(
-        status=status.HTTP_200_OK,
-        message="Hit Counter Service",
-        version="1.0.0",
-        url=url_for("list_counters", _external=True),
-    )
-
-
-############################################################
-# List counters
-############################################################
-@app.route("/counters", methods=["GET"])
-def list_counters():
-    """Lists all counters"""
-    app.logger.info("Request to list all counters...")
-
-    counters = [dict(name=count[0], counter=count[1]) for count in COUNTER.items()]
-
-    return jsonify(counters)
-
-
-############################################################
-# Create counters
-############################################################
-@app.route("/counters/<name>", methods=["POST"])
-def create_counters(name):
-    """Creates a new counter"""
-    app.logger.info("Request to Create counter: %s...", name)
-
-    if name in COUNTER:
-        return abort(status.HTTP_409_CONFLICT, f"Counter {name} already exists")
-
-    COUNTER[name] = 0
-
-    location_url = url_for("read_counters", name=name, _external=True)
+    """Root URL response"""
     return (
-        jsonify(name=name, counter=0),
-        status.HTTP_201_CREATED,
-        {"Location": location_url},
+        jsonify(
+            name="Account REST API Service",
+            version="1.0",
+            paths=url_for("list_accounts", _external=True),
+        ),
+        status.HTTP_200_OK,
     )
 
 
-############################################################
-# Read counters
-############################################################
-@app.route("/counters/<name>", methods=["GET"])
-def read_counters(name):
-    """Reads a single counter"""
-    app.logger.info("Request to Read counter: %s...", name)
-
-    if name not in COUNTER:
-        return abort(status.HTTP_404_NOT_FOUND, f"Counter {name} does not exist")
-
-    counter = COUNTER[name]
-    return jsonify(name=name, counter=counter)
-
-
-############################################################
-# Update counters
-############################################################
-@app.route("/counters/<name>", methods=["PUT"])
-def update_counters(name):
-    """Updates a counter"""
-    app.logger.info("Request to Update counter: %s...", name)
-
-    if name not in COUNTER:
-        return abort(status.HTTP_404_NOT_FOUND, f"Counter {name} does not exist")
-
-    COUNTER[name] += 1
-
-    counter = COUNTER[name]
-    return jsonify(name=name, counter=counter)
+######################################################################
+# CREATE A NEW ACCOUNT
+######################################################################
+@app.route("/accounts", methods=["POST"])
+def create_accounts():
+    """
+    Creates an Account
+    This endpoint will create an Account based the data in the body that is posted
+    """
+    app.logger.info("Request to create an Account")
+    check_content_type("application/json")
+    account = Account()
+    account.deserialize(request.get_json())
+    account.create()
+    message = account.serialize()
+    location_url = url_for("get_accounts", account_id=account.id, _external=True)
+    return make_response(
+        jsonify(message), status.HTTP_201_CREATED, {"Location": location_url}
+    )
 
 
-############################################################
-# Delete counters
-############################################################
-@app.route("/counters/<name>", methods=["DELETE"])
-def delete_counters(name):
-    """Deletes a counter"""
-    app.logger.info("Request to Delete counter: %s...", name)
+######################################################################
+# LIST ALL ACCOUNTS
+######################################################################
+@app.route("/accounts", methods=["GET"])
+def list_accounts():
+    """
+    List all Accounts
+    This endpoint will list all Accounts
+    """
+    app.logger.info("Request to list Accounts")
+    accounts = Account.all()
+    account_list = [account.serialize() for account in accounts]
+    app.logger.info("Returning [%s] accounts", len(account_list))
+    return jsonify(account_list), status.HTTP_200_OK
 
-    if name in COUNTER:
-        COUNTER.pop(name)
 
+######################################################################
+# READ AN ACCOUNT
+######################################################################
+@app.route("/accounts/<int:account_id>", methods=["GET"])
+def get_accounts(account_id):
+    """
+    Reads an Account
+    This endpoint will read an Account based the account_id requested
+    """
+    app.logger.info("Request to read an Account with id: %s", account_id)
+    account = Account.find(account_id)
+    if not account:
+        abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
+    return jsonify(account.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# UPDATE AN EXISTING ACCOUNT
+######################################################################
+@app.route("/accounts/<int:account_id>", methods=["PUT"])
+def update_accounts(account_id):
+    """
+    Update an Account
+    This endpoint will update an Account based on the posted data
+    """
+    app.logger.info("Request to update an Account with id: %s", account_id)
+    account = Account.find(account_id)
+    if not account:
+        abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
+    account.deserialize(request.get_json())
+    account.update()
+    return jsonify(account.serialize()), status.HTTP_200_OK
+
+
+######################################################################
+# DELETE AN ACCOUNT
+######################################################################
+@app.route("/accounts/<int:account_id>", methods=["DELETE"])
+def delete_accounts(account_id):
+    """
+    Delete an Account
+    This endpoint will delete an Account based on the account_id that is requested
+    """
+    app.logger.info("Request to delete an Account with id: %s", account_id)
+    account = Account.find(account_id)
+    if account:
+        account.delete()
     return "", status.HTTP_204_NO_CONTENT
 
 
-############################################################
-# Utility for testing
-############################################################
-def reset_counters():
-    """Removes all counters while testing"""
-    global COUNTER  # pylint: disable=global-statement
-    if app.testing:
-        COUNTER = {}
+######################################################################
+#  U T I L I T Y   F U N C T I O N S
+######################################################################
+def check_content_type(media_type):
+    """Checks that the media type is correct"""
+    content_type = request.headers.get("Content-Type")
+    if content_type and content_type == media_type:
+        return
+    app.logger.error("Invalid Content-Type: %s", content_type)
+    abort(
+        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        f"Content-Type must be {media_type}",
+    )
