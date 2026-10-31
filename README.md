@@ -1,4 +1,4 @@
-﻿# Customer Accounts Microservice (DevOps Capstone Project)
+# DevOps Capstone Project - Customer Accounts Microservice
 
 [![Build Status](https://github.com/Ragi509/vselh-ci-cd-final-project-template/actions/workflows/ci-build.yaml/badge.svg)](https://github.com/Ragi509/vselh-ci-cd-final-project-template/actions/workflows/ci-build.yaml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
